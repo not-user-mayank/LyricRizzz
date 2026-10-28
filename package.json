@@ -1,12 +1,12 @@
 {
   "name": "lyricrizzz",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Floating lyrics widget for Windows",
   "main": "src/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable --x64"
+    "dist:win": "electron-builder --win nsis portable --x64 --publish never"
   },
   "keywords": [],
   "author": "",
