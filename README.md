@@ -1,6 +1,6 @@
 # Lyricrizzz
 
-Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions and displays a playing track (or a paused track if nothing is playing), its artist, player, and play/pause state. It loads local lyrics first, then checks LRCLIB and caches a match. Theme controls and in-app lyric import are planned for later phases.
+Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions and displays the current track, artist, player, and play/pause state. It loads local lyrics first, then checks LRCLIB and caches a match. The widget includes theme controls, lyric import, timing adjustment, and position lock.
 
 ## Run locally
 
@@ -13,6 +13,8 @@ Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions 
 - Drag the lyrics card or the title area to move the widget.
 - Hover over the widget to show its controls.
 - Use the size buttons to resize and the slider to change opacity.
+- Use `−0.5` and `+0.5` to adjust lyric timing in half-second steps; the setting is saved between launches.
+- Use the lock icon to prevent the widget from being moved. Click it again to unlock.
 - Click the target icon or press `Ctrl+Shift+L` to toggle click-through. Press the shortcut again to turn click-through off.
 - Use the minimize button in the hover toolbar. Restore the minimized widget with `Ctrl+Shift+M`.
 - Use the close button to exit the app.
@@ -31,7 +33,7 @@ The app creates the local lyrics folder when it starts. Hover over the widget an
 
 ## Appearance and settings
 
-Open Settings from the widget toolbar to choose Minimal White, Dark Glass, Neon, Retro Cassette, or Transparent Blur. Settings include a copied custom background image, blur and dim controls, solid or gradient lyric colors, glow, font size, widget opacity, and a live preview. Preferences and the last widget position are saved locally with `electron-store`.
+Open Settings from the widget toolbar to choose Minimal White, Dark Glass, Neon, Retro Cassette, or Transparent Blur. Settings include a copied custom background image, blur and dim controls, solid or gradient lyric colors, glow, font size, widget opacity, and a live preview. Synced lyrics progressively fill word by word, and upcoming lines fade into view. Preferences, lyric offset, position lock, and the last widget position are saved locally with `electron-store`.
 
 ## Project folders
 

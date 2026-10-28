@@ -21,6 +21,8 @@ const DEFAULT_SETTINGS = {
   fontSize: 23,
   widgetOpacity: 0.94,
   widgetBounds: null,
+  offsetMs: 0,
+  lockPosition: false,
 };
 
 let lyricsWindow;
@@ -71,6 +73,8 @@ function normalizeSettings(input = {}) {
         height: number(input.widgetBounds.height, 178, 120, 500),
       }
       : null,
+    offsetMs: Math.round(number(input.offsetMs, DEFAULT_SETTINGS.offsetMs, -10_000, 10_000) / 500) * 500,
+    lockPosition: typeof input.lockPosition === 'boolean' ? input.lockPosition : DEFAULT_SETTINGS.lockPosition,
   };
 }
 
@@ -183,6 +187,7 @@ function createLyricsWindow() {
   });
 
   lyricsWindow.setAlwaysOnTop(true, 'screen-saver');
+  lyricsWindow.setMovable(!currentSettings.lockPosition);
   lyricsWindow.on('move', persistWidgetBounds);
   lyricsWindow.on('resize', persistWidgetBounds);
   lyricsWindow.webContents.on('did-start-loading', () => { rendererReady = false; });
@@ -213,6 +218,19 @@ ipcMain.handle('widget:set-opacity', (_event, value) => {
 
 ipcMain.handle('widget:minimize', () => lyricsWindow?.minimize());
 ipcMain.handle('widget:close', () => lyricsWindow?.close());
+ipcMain.handle('widget:adjust-offset', (_event, delta) => {
+  if (delta !== -500 && delta !== 500) return currentSettings.offsetMs;
+  currentSettings.offsetMs = Math.min(10_000, Math.max(-10_000, currentSettings.offsetMs + delta));
+  settingsStore?.set('settings', currentSettings);
+  return currentSettings.offsetMs;
+});
+ipcMain.handle('widget:set-position-lock', (_event, enabled) => {
+  if (typeof enabled !== 'boolean' || !lyricsWindow) return currentSettings.lockPosition;
+  currentSettings.lockPosition = enabled;
+  lyricsWindow.setMovable(!enabled);
+  settingsStore?.set('settings', currentSettings);
+  return currentSettings.lockPosition;
+});
 
 function sendMediaSession(session) {
   if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
@@ -365,6 +383,8 @@ ipcMain.handle('settings:save', async (_event, input) => {
   clearTimeout(preferencesWriteTimer);
   preferencesWriteTimer = undefined;
   updated.widgetBounds = currentSettings.widgetBounds;
+  updated.offsetMs = currentSettings.offsetMs;
+  updated.lockPosition = currentSettings.lockPosition;
   currentSettings = updated;
   settingsStore.set('settings', currentSettings);
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.setOpacity(currentSettings.widgetOpacity);
@@ -403,6 +423,7 @@ ipcMain.handle('settings:reset', async () => {
   currentSettings = { ...DEFAULT_SETTINGS };
   settingsStore.set('settings', currentSettings);
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.setOpacity(currentSettings.widgetOpacity);
+  if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.setMovable(true);
   await broadcastSettings();
   return settingsSnapshot();
 });

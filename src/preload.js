@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('lyricrizzz', {
   resize: (direction) => ipcRenderer.invoke('widget:resize', direction),
   minimize: () => ipcRenderer.invoke('widget:minimize'),
   close: () => ipcRenderer.invoke('widget:close'),
+  adjustOffset: (delta) => ipcRenderer.invoke('widget:adjust-offset', delta),
+  setPositionLock: (enabled) => ipcRenderer.invoke('widget:set-position-lock', enabled),
   setClickThrough: (enabled) => ipcRenderer.invoke('widget:set-click-through', enabled),
   onMediaSessionChanged: (callback) => {
     ipcRenderer.on('media-session:changed', (_event, session) => callback(session));

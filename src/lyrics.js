@@ -7,16 +7,33 @@ const lyricsMessage = document.getElementById('lyrics-message');
 const lyricsSource = document.getElementById('lyrics-source');
 const toast = document.getElementById('toast');
 const opacitySlider = document.getElementById('opacity');
+const offsetLabel = document.getElementById('offset-value');
+const lockButton = document.getElementById('lock-position');
 let mediaTimeline = { positionMs: 0, durationMs: 0, observedAt: 0, playbackStatus: 'paused' };
 let lyricLines = [];
 let lyricElements = [];
 let isSyncedLyrics = false;
 let activeLyricIndex = -2;
+let lyricOffsetMs = 0;
+let karaokeRowIndex = -1;
+let karaokeWordElements = [];
+const wordSegmenter = typeof Intl.Segmenter === 'function'
+  ? new Intl.Segmenter(undefined, { granularity: 'word' })
+  : null;
 
 opacitySlider.addEventListener('input', (event) => {
   window.lyricrizzz.setOpacity(Number(event.target.value) / 100);
 });
 document.getElementById('settings').addEventListener('click', () => window.lyricrizzz.openSettings());
+document.getElementById('offset-minus').addEventListener('click', () => adjustLyricsOffset(-500));
+document.getElementById('offset-plus').addEventListener('click', () => adjustLyricsOffset(500));
+lockButton.addEventListener('click', async () => {
+  try {
+    updatePositionLock(await window.lyricrizzz.setPositionLock(lockButton.getAttribute('aria-pressed') !== 'true'));
+  } catch (error) {
+    showToast(`Could not change position lock: ${error.message}`);
+  }
+});
 
 document.getElementById('smaller').addEventListener('click', () => window.lyricrizzz.resize('smaller'));
 document.getElementById('larger').addEventListener('click', () => window.lyricrizzz.resize('larger'));
@@ -84,10 +101,14 @@ function applyWidgetSettings(snapshot) {
   if (!snapshot?.settings || !snapshot?.themes) return;
   window.LyricrizzzTheme.applyAppearance(document.body, snapshot.settings, snapshot.themes, snapshot.backgroundDataUrl);
   opacitySlider.value = String(Math.round(snapshot.settings.widgetOpacity * 100));
+  lyricOffsetMs = Number(snapshot.settings.offsetMs) || 0;
+  updateOffsetLabel();
+  updatePositionLock(Boolean(snapshot.settings.lockPosition));
 }
 
 function updateLyrics(payload) {
   const data = payload || { lines: [], message: 'No lyrics found for this song.' };
+  resetKaraokeMarkup();
   lyricLines = Array.isArray(data.lines) ? data.lines : [];
   isSyncedLyrics = Boolean(data.synced);
   activeLyricIndex = -2;
@@ -141,7 +162,7 @@ function getCurrentPositionMs() {
   const elapsed = mediaTimeline.playbackStatus === 'playing'
     ? performance.now() - mediaTimeline.observedAt
     : 0;
-  const current = mediaTimeline.positionMs + elapsed;
+  const current = Math.max(0, mediaTimeline.positionMs + elapsed + lyricOffsetMs);
   return mediaTimeline.durationMs > 0 ? Math.min(current, mediaTimeline.durationMs) : current;
 }
 
@@ -161,6 +182,7 @@ function updateActiveLyric() {
       high = middle - 1;
     }
   }
+  updateKaraokeProgress(positionMs, activeIndex);
   if (activeIndex === activeLyricIndex) return;
   activeLyricIndex = activeIndex;
 
@@ -171,6 +193,93 @@ function updateActiveLyric() {
   });
   const target = lyricElements[activeIndex < 0 ? 0 : activeIndex];
   target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function getWordSegments(text) {
+  if (wordSegmenter) {
+    const segments = Array.from(wordSegmenter.segment(text));
+    if (segments.some((item) => item.isWordLike)) return segments;
+    return segments.map((item) => ({ segment: item.segment, isWordLike: true }));
+  }
+  return String(text).split(/(\s+)/u).map((segment) => ({ segment, isWordLike: !/^\s+$/u.test(segment) }));
+}
+
+function prepareKaraokeRow(index) {
+  if (index < 0 || karaokeRowIndex === index) return;
+  resetKaraokeMarkup();
+  const row = lyricElements[index];
+  if (!row) return;
+  karaokeRowIndex = index;
+  karaokeWordElements = [];
+  for (const part of getWordSegments(lyricLines[index].text)) {
+    if (!part.isWordLike) {
+      row.append(document.createTextNode(part.segment));
+      continue;
+    }
+    const word = document.createElement('span');
+    word.className = 'karaoke-word';
+    word.textContent = part.segment;
+    row.append(word);
+    karaokeWordElements.push(word);
+  }
+}
+
+function resetKaraokeMarkup() {
+  if (karaokeRowIndex >= 0 && lyricElements[karaokeRowIndex]) {
+    lyricElements[karaokeRowIndex].textContent = lyricLines[karaokeRowIndex]?.text || '';
+  }
+  karaokeRowIndex = -1;
+  karaokeWordElements = [];
+}
+
+function updateKaraokeProgress(positionMs, activeIndex) {
+  if (activeIndex < 0) {
+    resetKaraokeMarkup();
+    return;
+  }
+  prepareKaraokeRow(activeIndex);
+  if (karaokeWordElements.length === 0) return;
+
+  const lineStart = lyricLines[activeIndex].timeMs;
+  const nextLineStart = lyricLines[activeIndex + 1]?.timeMs;
+  const end = nextLineStart > lineStart
+    ? nextLineStart
+    : mediaTimeline.durationMs > lineStart
+      ? Math.min(mediaTimeline.durationMs, lineStart + 4000)
+      : lineStart + 4000;
+  const progress = Math.min(1, Math.max(0, (positionMs - lineStart) / Math.max(1, end - lineStart)));
+  const wordProgress = progress * karaokeWordElements.length;
+  const filledCount = Math.floor(wordProgress);
+  const activeWordProgress = wordProgress - filledCount;
+
+  karaokeWordElements.forEach((word, index) => {
+    const filled = index < filledCount;
+    word.classList.toggle('filled', filled);
+    word.style.opacity = filled ? '' : index === filledCount ? String(0.38 + 0.62 * activeWordProgress) : '';
+  });
+}
+
+async function adjustLyricsOffset(deltaMs) {
+  try {
+    lyricOffsetMs = await window.lyricrizzz.adjustOffset(deltaMs);
+    updateOffsetLabel();
+    updateActiveLyric();
+  } catch (error) {
+    showToast(`Could not adjust lyric timing: ${error.message}`);
+  }
+}
+
+function updateOffsetLabel() {
+  const seconds = lyricOffsetMs / 1000;
+  offsetLabel.textContent = `${seconds > 0 ? '+' : ''}${seconds.toFixed(1)}s`;
+  offsetLabel.title = `Lyrics offset ${seconds.toFixed(1)} seconds`;
+}
+
+function updatePositionLock(locked) {
+  lockButton.setAttribute('aria-pressed', String(locked));
+  lockButton.textContent = locked ? '🔒' : '🔓';
+  lockButton.title = locked ? 'Unlock widget position' : 'Lock widget position';
+  lockButton.setAttribute('aria-label', lockButton.title);
 }
 
 function animateLyrics() {
