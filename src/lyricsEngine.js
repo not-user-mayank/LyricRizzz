@@ -14,11 +14,12 @@ function normalizeName(value) {
 }
 
 function safeFilePart(value) {
-  return String(value || '')
+  const safe = String(value || '')
     .normalize('NFC')
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')
     .replace(/[. ]+$/g, '')
     .trim();
+  return /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(safe) ? `_${safe}` : safe;
 }
 
 function parseLrc(content) {
@@ -90,6 +91,19 @@ function resultFromContent(format, content, source) {
 
 function localBaseName(artist, title) {
   return `${safeFilePart(artist)} - ${safeFilePart(title)}`.replace(/^[ -]+|[ -]+$/g, '');
+}
+
+function extractLrcMetadata(content) {
+  const metadata = {};
+  for (const line of String(content).replace(/^\uFEFF/, '').split(/\r?\n/)) {
+    const match = line.match(/^\s*\[(ar|ti):([^\]]*)\]/i);
+    if (match) metadata[match[1].toLowerCase()] = match[2].trim();
+  }
+  return { artist: metadata.ar || '', title: metadata.ti || '' };
+}
+
+function sanitizeLocalBaseName(value) {
+  return safeFilePart(value).replace(/^[ -]+|[ -]+$/g, '');
 }
 
 async function loadLocalLyrics(directory, artist, title) {
@@ -224,7 +238,13 @@ async function saveOnlineLyrics(directory, artist, title, result) {
     }).join('\n')
     : result.lines.map((line) => line.text).join('\n');
   await fs.mkdir(directory, { recursive: true });
-  await fs.writeFile(filePath, `${content}\n`, { encoding: 'utf8', flag: 'w' });
+  try {
+    await fs.writeFile(filePath, `${content}\n`, { encoding: 'utf8', flag: 'wx' });
+    return true;
+  } catch (error) {
+    if (error.code === 'EEXIST') return false;
+    throw error;
+  }
 }
 
 async function getLyrics(track, localDirectory) {
@@ -241,7 +261,8 @@ async function getLyrics(track, localDirectory) {
     if (!online) return { source: 'none', format: null, synced: false, lines: [], message: 'No lyrics found for this song.' };
     let cacheMessage;
     try {
-      await saveOnlineLyrics(localDirectory, track.artist, track.title, online);
+      const saved = await saveOnlineLyrics(localDirectory, track.artist, track.title, online);
+      if (!saved) cacheMessage = 'An existing local file was kept.';
     } catch {
       cacheMessage = 'Lyrics found online, but the local copy could not be saved.';
     }
@@ -252,4 +273,12 @@ async function getLyrics(track, localDirectory) {
   }
 }
 
-module.exports = { getLyrics, parseLrc, parseSrt, parsePlainLyrics };
+module.exports = {
+  getLyrics,
+  parseLrc,
+  parseSrt,
+  parsePlainLyrics,
+  extractLrcMetadata,
+  makeLocalBaseName: localBaseName,
+  sanitizeLocalBaseName,
+};

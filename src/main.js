@@ -1,7 +1,8 @@
-const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain } = require('electron');
+const fs = require('node:fs/promises');
 const path = require('node:path');
 const { startMediaSessionService, stopMediaSessionService } = require('./mediaSessionService');
-const { getLyrics } = require('./lyricsEngine');
+const { getLyrics, extractLrcMetadata, makeLocalBaseName, sanitizeLocalBaseName } = require('./lyricsEngine');
 
 let lyricsWindow;
 let clickThrough = false;
@@ -71,14 +72,19 @@ function sendMediaSession(session) {
     : '';
   if (trackKey === currentTrackKey) return;
   currentTrackKey = trackKey;
-  const requestId = ++lyricsRequestId;
 
   if (!session || (!session.title && !session.artist)) {
+    lyricsRequestId += 1;
     latestLyrics = { lines: [], message: '♪ Waiting for song...' };
     if (rendererReady) lyricsWindow.webContents.send('lyrics:changed', latestLyrics);
     return;
   }
 
+  loadLyricsForSession(session);
+}
+
+function loadLyricsForSession(session) {
+  const requestId = ++lyricsRequestId;
   latestLyrics = { lines: [], message: 'Looking for lyrics...' };
   if (rendererReady) lyricsWindow.webContents.send('lyrics:changed', latestLyrics);
   getLyrics(session, lyricsDirectory).then((lyrics) => {
@@ -88,6 +94,107 @@ function sendMediaSession(session) {
     }
   });
 }
+
+async function importLyricsPaths(sourcePaths) {
+  if (!Array.isArray(sourcePaths) || sourcePaths.length === 0) return { message: 'No lyric files selected.' };
+  if (sourcePaths.length > 20) return { message: 'Add up to 20 lyric files at a time.' };
+  await fs.mkdir(lyricsDirectory, { recursive: true });
+
+  const currentTrack = latestMediaSession && (latestMediaSession.artist || latestMediaSession.title)
+    ? latestMediaSession
+    : null;
+  const useCurrentTrackName = sourcePaths.length === 1 && currentTrack;
+  const outcomes = [];
+
+  for (const sourcePathValue of sourcePaths) {
+    try {
+      const rawSourcePath = String(sourcePathValue || '');
+      if (!path.isAbsolute(rawSourcePath)) {
+        outcomes.push(`${path.basename(rawSourcePath || 'file')}: choose a local file.`);
+        continue;
+      }
+      const sourcePath = path.resolve(rawSourcePath);
+      const extension = path.extname(sourcePath).toLowerCase();
+      if (!['.lrc', '.srt', '.txt'].includes(extension)) {
+        outcomes.push(extension === '.pdf'
+          ? `${path.basename(sourcePath)}: PDF lyrics are not supported. Convert the file to .lrc, .srt, or .txt.`
+          : `${path.basename(sourcePath || 'file')}: choose an .lrc, .srt, or .txt file.`);
+        continue;
+      }
+
+      const stat = await fs.stat(sourcePath);
+      if (!stat.isFile() || stat.size > 5 * 1024 * 1024) {
+        outcomes.push(`${path.basename(sourcePath)}: the file is not a regular lyrics file or is larger than 5 MB.`);
+        continue;
+      }
+      const content = await fs.readFile(sourcePath);
+      let baseName = '';
+      if (extension === '.lrc') {
+        const metadata = extractLrcMetadata(content.toString('utf8'));
+        if (metadata.artist && metadata.title) baseName = makeLocalBaseName(metadata.artist, metadata.title);
+      }
+      if (!baseName && useCurrentTrackName) baseName = makeLocalBaseName(currentTrack.artist, currentTrack.title);
+      if (!baseName) baseName = sanitizeLocalBaseName(path.basename(sourcePath, extension));
+      if (!baseName) {
+        outcomes.push(`${path.basename(sourcePath)}: could not determine a file name.`);
+        continue;
+      }
+
+      const targetPath = path.join(lyricsDirectory, `${baseName}${extension}`);
+      let shouldWrite = true;
+      try {
+        const existing = await fs.readFile(targetPath);
+        if (existing.equals(content)) {
+          outcomes.push(`Already added: ${baseName}${extension}`);
+          continue;
+        }
+        const answer = await dialog.showMessageBox(lyricsWindow, {
+          type: 'question',
+          title: 'Replace local lyrics?',
+          message: `${baseName}${extension} already exists. Replace it with this file?`,
+          buttons: ['Replace', 'Keep existing'],
+          defaultId: 1,
+          cancelId: 1,
+        });
+        shouldWrite = answer.response === 0;
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+
+      if (!shouldWrite) {
+        outcomes.push(`Kept existing file: ${baseName}${extension}`);
+        continue;
+      }
+      await fs.writeFile(targetPath, content);
+      outcomes.push(`Added: ${baseName}${extension}`);
+    } catch (error) {
+      outcomes.push(`${path.basename(String(sourcePathValue || 'file'))}: ${error.message}`);
+    }
+  }
+
+  const currentBase = currentTrack ? makeLocalBaseName(currentTrack.artist, currentTrack.title).toLocaleLowerCase() : '';
+  if (currentTrack && outcomes.some((outcome) => {
+    const normalized = outcome.toLocaleLowerCase();
+    return normalized.startsWith(`added: ${currentBase}.`)
+      || normalized.startsWith(`kept existing file: ${currentBase}.`)
+      || normalized.startsWith(`already added: ${currentBase}.`);
+  })) {
+    loadLyricsForSession(currentTrack);
+  }
+  return { message: outcomes.join('\n') || 'No files were added.' };
+}
+
+ipcMain.handle('lyrics:choose-file', async () => {
+  const selection = await dialog.showOpenDialog(lyricsWindow, {
+    title: 'Add local lyrics',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Lyrics files', extensions: ['lrc', 'srt', 'txt'] }],
+  });
+  if (selection.canceled) return { message: 'Import cancelled.' };
+  return importLyricsPaths(selection.filePaths);
+});
+
+ipcMain.handle('lyrics:import-dropped', (_event, sourcePaths) => importLyricsPaths(sourcePaths));
 
 ipcMain.handle('widget:resize', (_event, direction) => {
   if (!lyricsWindow) return;
@@ -107,6 +214,9 @@ ipcMain.handle('widget:set-click-through', (_event, enabled) => {
 
 app.whenReady().then(() => {
   lyricsDirectory = path.join(app.getPath('documents'), 'FloatingLyrics', 'LocalLyrics');
+  fs.mkdir(lyricsDirectory, { recursive: true }).catch((error) => {
+    console.error('Could not create the local lyrics folder:', error.message);
+  });
   createLyricsWindow();
   stopListeningForMedia = startMediaSessionService(sendMediaSession, (error) => {
     console.error('Windows media detection could not start:', error.message);

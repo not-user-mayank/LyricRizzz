@@ -11,6 +11,7 @@
     <main class="widget" aria-label="Floating lyrics">
       <header class="toolbar" aria-label="Widget controls">
         <span class="drag-handle" title="Drag to move">LYRICRIZZZ</span>
+        <button id="add-lyrics" title="Add local lyrics" aria-label="Add local lyrics">＋</button>
         <button id="click-through" title="Toggle click-through (Ctrl+Shift+L)" aria-pressed="false">◎</button>
         <button id="smaller" title="Make widget smaller">−</button>
         <button id="larger" title="Make widget larger">＋</button>
@@ -31,6 +32,8 @@
         <div class="hint" id="lyrics-source">Drag anywhere • Ctrl+Shift+L toggles click-through</div>
       </section>
     </main>
+    <div class="drop-overlay" id="drop-overlay">Drop .lrc, .srt, or .txt lyrics</div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="lyrics.js"></script>
   </body>
 </html>

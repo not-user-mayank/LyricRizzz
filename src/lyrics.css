@@ -79,3 +79,14 @@ html, body {
 .hint { flex: 0 0 auto; overflow: hidden; font-size: 9px; letter-spacing: .2px; opacity: .7; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
 body.click-through .toolbar { opacity: 0 !important; }
+
+.drop-overlay { position: fixed; inset: 8px; z-index: 5; display: none; align-items: center; justify-content: center; border: 2px dashed #b3a8ff; border-radius: 18px; background: #161522e8; color: #fff; font-size: 16px; font-weight: 650; text-align: center; pointer-events: none; }
+body.dragging-files .drop-overlay { display: flex; }
+.toast { position: fixed; z-index: 6; left: 50%; bottom: 10px; max-width: calc(100% - 28px); padding: 8px 12px; transform: translate(-50%, 12px); border: 1px solid #ffffff30; border-radius: 10px; background: #171923f2; color: #fff; font-size: 12px; line-height: 1.35; opacity: 0; pointer-events: none; white-space: pre-line; transition: opacity 140ms ease, transform 140ms ease; }
+.toast.visible { transform: translate(-50%, 0); opacity: 1; }
+
+@media (max-width: 380px) {
+  .toolbar { gap: 2px; }
+  .drag-handle { display: none; }
+  .opacity-control input { width: 38px; }
+}

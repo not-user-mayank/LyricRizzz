@@ -5,6 +5,7 @@ const songArtist = document.getElementById('song-artist');
 const lyricsList = document.getElementById('lyrics-list');
 const lyricsMessage = document.getElementById('lyrics-message');
 const lyricsSource = document.getElementById('lyrics-source');
+const toast = document.getElementById('toast');
 let mediaTimeline = { positionMs: 0, durationMs: 0, observedAt: 0, playbackStatus: 'paused' };
 let lyricLines = [];
 let lyricElements = [];
@@ -19,6 +20,52 @@ document.getElementById('smaller').addEventListener('click', () => window.lyricr
 document.getElementById('larger').addEventListener('click', () => window.lyricrizzz.resize('larger'));
 document.getElementById('minimize').addEventListener('click', () => window.lyricrizzz.minimize());
 document.getElementById('close').addEventListener('click', () => window.lyricrizzz.close());
+document.getElementById('add-lyrics').addEventListener('click', async () => {
+  try {
+    const result = await window.lyricrizzz.chooseLyricsFile();
+    if (result?.message && result.message !== 'Import cancelled.') showToast(result.message);
+  } catch (error) {
+    showToast(`Could not add lyrics: ${error.message}`);
+  }
+});
+
+let dragDepth = 0;
+let toastTimeout;
+document.addEventListener('dragenter', (event) => {
+  if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+  event.preventDefault();
+  dragDepth += 1;
+  document.body.classList.add('dragging-files');
+});
+document.addEventListener('dragover', (event) => {
+  if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+});
+document.addEventListener('dragleave', (event) => {
+  if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) document.body.classList.remove('dragging-files');
+});
+document.addEventListener('drop', async (event) => {
+  if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+  event.preventDefault();
+  dragDepth = 0;
+  document.body.classList.remove('dragging-files');
+  try {
+    const paths = Array.from(event.dataTransfer.files || [])
+      .map((file) => window.lyricrizzz.getDroppedFilePath(file))
+      .filter(Boolean);
+    if (paths.length === 0) {
+      showToast('Could not read the dropped file path. Use the + button to browse instead.');
+      return;
+    }
+    const result = await window.lyricrizzz.importDroppedFiles(paths);
+    if (result?.message) showToast(result.message);
+  } catch (error) {
+    showToast(`Could not add lyrics: ${error.message}`);
+  }
+});
 
 clickThroughButton.addEventListener('click', async () => {
   const enabled = await window.lyricrizzz.setClickThrough(clickThroughButton.getAttribute('aria-pressed') !== 'true');
@@ -49,7 +96,10 @@ function updateLyrics(payload) {
   lyricsSource.textContent = lyricLines.length
     ? `${data.source === 'online' ? 'LRCLIB' : 'LOCAL FILE'} · ${data.synced ? 'SYNCED' : 'UNSYNCED'}`
     : (data.format === 'pdf' ? 'PDF CONVERSION NEEDED' : 'LYRICS');
-  if (data.cacheMessage) lyricsSource.textContent += ' · COPY NOT SAVED';
+  lyricsSource.title = data.cacheMessage || '';
+  if (data.cacheMessage) {
+    lyricsSource.textContent += data.cacheMessage.includes('existing') ? ' · LOCAL COPY KEPT' : ' · COPY NOT SAVED';
+  }
   if (isSyncedLyrics) updateActiveLyric();
 }
 
@@ -119,6 +169,13 @@ function animateLyrics() {
 }
 
 requestAnimationFrame(animateLyrics);
+
+function showToast(message) {
+  clearTimeout(toastTimeout);
+  toast.textContent = message;
+  toast.classList.add('visible');
+  toastTimeout = setTimeout(() => toast.classList.remove('visible'), 4200);
+}
 
 function updateClickThrough(enabled) {
   clickThroughButton.setAttribute('aria-pressed', String(enabled));

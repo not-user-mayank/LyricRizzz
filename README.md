@@ -27,6 +27,8 @@ Windows 10 build 17763 or later, 64-bit, is required for media-session detection
 
 Lyricrizzz checks `Documents/FloatingLyrics/LocalLyrics/` first for a file named `Artist - Title.lrc`, `.srt`, or `.txt`. If no local match exists, it queries LRCLIB and saves a found lyric file there for next time. LRC and SRT files sync to Windows playback position; TXT files are shown as scrollable unsynced lyrics. A matching PDF displays a conversion message.
 
+The app creates the local lyrics folder when it starts. Hover over the widget and use the `＋` button, or drop lyrics files onto the widget, to add files. A single imported file uses the current track's artist and title when available; LRC `[ar:]` and `[ti:]` tags are used otherwise. Existing files are kept unless you choose to replace them.
+
 ## Project folders
 
 - `src/` — Electron main process, preload bridge, and widget UI.

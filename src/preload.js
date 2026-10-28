@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('lyricrizzz', {
   setOpacity: (value) => ipcRenderer.invoke('widget:set-opacity', value),
@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('lyricrizzz', {
   onLyricsChanged: (callback) => {
     ipcRenderer.on('lyrics:changed', (_event, lyrics) => callback(lyrics));
   },
+  chooseLyricsFile: () => ipcRenderer.invoke('lyrics:choose-file'),
+  importDroppedFiles: (paths) => ipcRenderer.invoke('lyrics:import-dropped', paths),
+  getDroppedFilePath: (file) => webUtils.getPathForFile(file),
   onClickThroughChanged: (callback) => {
     ipcRenderer.on('widget:click-through-changed', (_event, enabled) => callback(enabled));
   },
