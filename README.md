@@ -29,6 +29,10 @@ Lyricrizzz checks `Documents/FloatingLyrics/LocalLyrics/` first for a file named
 
 The app creates the local lyrics folder when it starts. Hover over the widget and use the `＋` button, or drop lyrics files onto the widget, to add files. A single imported file uses the current track's artist and title when available; LRC `[ar:]` and `[ti:]` tags are used otherwise. Existing files are kept unless you choose to replace them.
 
+## Appearance and settings
+
+Open Settings from the widget toolbar to choose Minimal White, Dark Glass, Neon, Retro Cassette, or Transparent Blur. Settings include a copied custom background image, blur and dim controls, solid or gradient lyric colors, glow, font size, widget opacity, and a live preview. Preferences and the last widget position are saved locally with `electron-store`.
+
 ## Project folders
 
 - `src/` — Electron main process, preload bridge, and widget UI.

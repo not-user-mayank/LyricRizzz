@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Lyricrizzz Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <header class="settings-header">
+      <div>
+        <div class="eyebrow">LYRICRIZZZ</div>
+        <h1>Personalize your widget</h1>
+        <p>Choose a look, tune the lyrics, and preview changes before saving.</p>
+      </div>
+      <button id="close-settings" class="icon-button" title="Close settings">×</button>
+    </header>
+
+    <div class="settings-layout">
+      <main class="settings-scroll">
+        <section class="settings-section">
+          <div class="section-heading"><div><h2>Theme</h2><p>Start with a preset, then make it yours.</p></div></div>
+          <div id="theme-list" class="theme-list"></div>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-heading"><div><h2>Background image</h2><p>Images are copied into Lyricrizzz's user data folder.</p></div></div>
+          <div class="background-actions">
+            <button id="choose-background" class="secondary-button">Choose image</button>
+            <button id="clear-background" class="text-button">Remove</button>
+            <span id="background-name" class="file-name">No custom image</span>
+          </div>
+          <label class="range-field">
+            <span><b>Blur</b><output id="blur-value"></output></span>
+            <input id="background-blur" type="range" min="0" max="30" value="8" />
+          </label>
+          <label class="range-field">
+            <span><b>Image dim</b><output id="dim-value"></output></span>
+            <input id="background-dim" type="range" min="0" max="90" value="35" />
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-heading"><div><h2>Lyric colors</h2><p>Set a solid color or a two-color gradient.</p></div></div>
+          <div class="segmented-control" role="group" aria-label="Lyric color style">
+            <button type="button" data-mode="solid" class="selected">Solid</button>
+            <button type="button" data-mode="gradient">Gradient</button>
+          </div>
+          <div id="solid-controls" class="color-grid">
+            <label class="color-field"><span>Current line</span><input id="current-color" type="color" value="#ffffff" /></label>
+            <label class="color-field"><span>Next line</span><input id="next-color" type="color" value="#d0ccda" /></label>
+          </div>
+          <div id="gradient-controls" class="gradient-controls" hidden>
+            <label class="color-field"><span>Gradient start</span><input id="gradient-start" type="color" value="#ff8a3d" /></label>
+            <label class="color-field"><span>Gradient end</span><input id="gradient-end" type="color" value="#ff4f9a" /></label>
+            <label class="range-field angle-field"><span><b>Angle</b><output id="angle-value"></output></span><input id="gradient-angle" type="range" min="0" max="360" value="35" /></label>
+            <label class="color-field next-gradient"><span>Next line</span><input id="next-gradient-color" type="color" value="#d0ccda" /></label>
+          </div>
+          <div class="options-row">
+            <label class="check-field"><input id="glow" type="checkbox" checked /><span>Glow current line</span></label>
+            <label class="range-field font-field"><span><b>Font size</b><output id="font-value"></output></span><input id="font-size" type="range" min="12" max="40" value="23" /></label>
+            <label class="range-field font-field"><span><b>Widget opacity</b><output id="widget-opacity-value"></output></span><input id="widget-opacity" type="range" min="25" max="100" value="94" /></label>
+          </div>
+        </section>
+      </main>
+
+      <aside class="preview-column">
+        <div class="preview-title"><span>LIVE PREVIEW</span><span class="live-dot"></span></div>
+        <div class="preview-canvas" id="preview-canvas">
+          <img class="widget-background" alt="" aria-hidden="true" hidden />
+          <div class="preview-panel">
+            <div class="preview-status">PLAYING · SPOTIFY</div>
+            <div class="preview-track">Samajavaragamana</div>
+            <div class="preview-artist">Sid Sriram</div>
+            <div class="preview-lyrics">
+              <div class="preview-previous">Nee kaalanni</div>
+              <div class="preview-current current">Kshanamulo</div>
+              <div class="preview-next next">Naa manasuni</div>
+            </div>
+          </div>
+        </div>
+        <p class="preview-note">Your widget updates when you save.</p>
+      </aside>
+    </div>
+
+    <footer class="settings-footer">
+      <span id="save-status" role="status" aria-live="polite">Changes are not saved yet.</span>
+      <button id="reset-settings" class="text-button">Reset defaults</button>
+      <button id="save-settings" class="primary-button">Save settings</button>
+    </footer>
+    <script src="theme.js"></script>
+    <script src="settings.js"></script>
+  </body>
+</html>

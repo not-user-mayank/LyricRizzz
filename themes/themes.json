@@ -1,0 +1,82 @@
+[
+  {
+    "id": "minimal-white",
+    "name": "Minimal White",
+    "description": "Light, clean lyrics with a soft frosted panel.",
+    "tokens": {
+      "panelBackground": "rgba(248, 249, 253, 0.84)",
+      "panelBorder": "rgba(25, 32, 48, 0.16)",
+      "panelShadow": "0 12px 38px rgba(0, 0, 0, 0.18), inset 0 1px rgba(255, 255, 255, 0.72)",
+      "panelRadius": "18px",
+      "textColor": "#18202e",
+      "mutedColor": "#687286",
+      "currentColor": "#18202e",
+      "nextColor": "#788194",
+      "accentColor": "#5a63d8"
+    }
+  },
+  {
+    "id": "dark-glass",
+    "name": "Dark Glass",
+    "description": "A calm dark translucent panel for any desktop.",
+    "tokens": {
+      "panelBackground": "linear-gradient(135deg, rgba(25, 26, 37, 0.91), rgba(40, 38, 51, 0.86))",
+      "panelBorder": "rgba(255, 255, 255, 0.13)",
+      "panelShadow": "0 12px 38px rgba(0, 0, 0, 0.5), inset 0 1px rgba(255, 255, 255, 0.09)",
+      "panelRadius": "18px",
+      "textColor": "#f6f7fb",
+      "mutedColor": "#b8b5c7",
+      "currentColor": "#ffffff",
+      "nextColor": "#d0ccda",
+      "accentColor": "#a79dff"
+    }
+  },
+  {
+    "id": "neon",
+    "name": "Neon",
+    "description": "Electric cyan and violet highlights on midnight blue.",
+    "tokens": {
+      "panelBackground": "linear-gradient(135deg, rgba(7, 12, 31, 0.94), rgba(18, 13, 43, 0.9))",
+      "panelBorder": "rgba(84, 244, 255, 0.36)",
+      "panelShadow": "0 10px 36px rgba(0, 0, 0, 0.52), inset 0 0 22px rgba(91, 88, 255, 0.12)",
+      "panelRadius": "15px",
+      "textColor": "#f2f3ff",
+      "mutedColor": "#a6b4d9",
+      "currentColor": "#72f5ff",
+      "nextColor": "#c8a3ff",
+      "accentColor": "#55e9ff"
+    }
+  },
+  {
+    "id": "retro-cassette",
+    "name": "Retro Cassette",
+    "description": "Warm analog tones inspired by old tape decks.",
+    "tokens": {
+      "panelBackground": "linear-gradient(135deg, rgba(48, 29, 24, 0.94), rgba(79, 46, 34, 0.89))",
+      "panelBorder": "rgba(255, 208, 153, 0.28)",
+      "panelShadow": "0 12px 34px rgba(0, 0, 0, 0.48), inset 0 1px rgba(255, 221, 180, 0.12)",
+      "panelRadius": "12px",
+      "textColor": "#fff0d7",
+      "mutedColor": "#d2aa83",
+      "currentColor": "#ffd078",
+      "nextColor": "#efd0ab",
+      "accentColor": "#ff9866"
+    }
+  },
+  {
+    "id": "transparent-blur",
+    "name": "Transparent Blur",
+    "description": "An almost invisible surface with soft background blur.",
+    "tokens": {
+      "panelBackground": "rgba(15, 18, 24, 0.43)",
+      "panelBorder": "rgba(255, 255, 255, 0.19)",
+      "panelShadow": "0 8px 28px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.11)",
+      "panelRadius": "20px",
+      "textColor": "#ffffff",
+      "mutedColor": "#d2d3db",
+      "currentColor": "#ffffff",
+      "nextColor": "#d7d6e0",
+      "accentColor": "#c3b9ff"
+    }
+  }
+]

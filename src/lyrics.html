@@ -3,14 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
     <title>Lyricrizzz</title>
     <link rel="stylesheet" href="lyrics.css" />
   </head>
   <body>
     <main class="widget" aria-label="Floating lyrics">
+      <img class="widget-background" alt="" aria-hidden="true" hidden />
       <header class="toolbar" aria-label="Widget controls">
         <span class="drag-handle" title="Drag to move">LYRICRIZZZ</span>
+        <button id="settings" title="Settings" aria-label="Settings">⚙</button>
         <button id="add-lyrics" title="Add local lyrics" aria-label="Add local lyrics">＋</button>
         <button id="click-through" title="Toggle click-through (Ctrl+Shift+L)" aria-pressed="false">◎</button>
         <button id="smaller" title="Make widget smaller">−</button>
@@ -34,6 +36,7 @@
     </main>
     <div class="drop-overlay" id="drop-overlay">Drop .lrc, .srt, or .txt lyrics</div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="theme.js"></script>
     <script src="lyrics.js"></script>
   </body>
 </html>

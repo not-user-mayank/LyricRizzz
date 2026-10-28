@@ -6,15 +6,17 @@ const lyricsList = document.getElementById('lyrics-list');
 const lyricsMessage = document.getElementById('lyrics-message');
 const lyricsSource = document.getElementById('lyrics-source');
 const toast = document.getElementById('toast');
+const opacitySlider = document.getElementById('opacity');
 let mediaTimeline = { positionMs: 0, durationMs: 0, observedAt: 0, playbackStatus: 'paused' };
 let lyricLines = [];
 let lyricElements = [];
 let isSyncedLyrics = false;
 let activeLyricIndex = -2;
 
-document.getElementById('opacity').addEventListener('input', (event) => {
+opacitySlider.addEventListener('input', (event) => {
   window.lyricrizzz.setOpacity(Number(event.target.value) / 100);
 });
+document.getElementById('settings').addEventListener('click', () => window.lyricrizzz.openSettings());
 
 document.getElementById('smaller').addEventListener('click', () => window.lyricrizzz.resize('smaller'));
 document.getElementById('larger').addEventListener('click', () => window.lyricrizzz.resize('larger'));
@@ -75,6 +77,14 @@ clickThroughButton.addEventListener('click', async () => {
 window.lyricrizzz.onClickThroughChanged(updateClickThrough);
 window.lyricrizzz.onMediaSessionChanged(updateMediaSession);
 window.lyricrizzz.onLyricsChanged(updateLyrics);
+window.lyricrizzz.onSettingsChanged(applyWidgetSettings);
+window.lyricrizzz.getSettings().then(applyWidgetSettings).catch((error) => showToast(`Could not load settings: ${error.message}`));
+
+function applyWidgetSettings(snapshot) {
+  if (!snapshot?.settings || !snapshot?.themes) return;
+  window.LyricrizzzTheme.applyAppearance(document.body, snapshot.settings, snapshot.themes, snapshot.backgroundDataUrl);
+  opacitySlider.value = String(Math.round(snapshot.settings.widgetOpacity * 100));
+}
 
 function updateLyrics(payload) {
   const data = payload || { lines: [], message: 'No lyrics found for this song.' };

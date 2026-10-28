@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld('lyricrizzz', {
   chooseLyricsFile: () => ipcRenderer.invoke('lyrics:choose-file'),
   importDroppedFiles: (paths) => ipcRenderer.invoke('lyrics:import-dropped', paths),
   getDroppedFilePath: (file) => webUtils.getPathForFile(file),
+  openSettings: () => ipcRenderer.invoke('widget:open-settings'),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+  chooseBackground: () => ipcRenderer.invoke('settings:choose-background'),
+  resetSettings: () => ipcRenderer.invoke('settings:reset'),
+  onSettingsChanged: (callback) => {
+    ipcRenderer.on('settings:changed', (_event, snapshot) => callback(snapshot));
+  },
   onClickThroughChanged: (callback) => {
     ipcRenderer.on('widget:click-through-changed', (_event, enabled) => callback(enabled));
   },
