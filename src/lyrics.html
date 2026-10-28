@@ -28,15 +28,14 @@
         <div class="track-title" id="song-title">—</div>
         <div class="song-artist" id="song-artist"></div>
         <div class="lyrics-scroll" id="lyrics-scroll">
-          <div class="lyrics-message" id="lyrics-message">♪ Waiting for song...</div>
+          <div class="lyrics-message" id="lyrics-message"><span id="lyrics-message-text">♪ Waiting for song...</span><button id="retry-lyrics" hidden>Retry</button></div>
           <div class="lyrics-list" id="lyrics-list"></div>
         </div>
         <div class="widget-footer">
           <div class="hint" id="lyrics-source">LRCLIB · LOCAL-FIRST</div>
-          <div class="offset-controls" aria-label="Lyrics timing and widget position">
-            <button id="offset-minus" title="Show lyrics 0.5 seconds later">−0.5</button>
-            <span id="offset-value">0.0s</span>
-            <button id="offset-plus" title="Show lyrics 0.5 seconds earlier">+0.5</button>
+          <div class="offset-controls" aria-label="Lyrics timing correction">
+            <input id="offset-slider" type="range" min="-300" max="300" step="1" value="0" aria-label="Lyrics timing correction" title="Drag to align lyrics; adjustments are saved for this song" />
+            <button id="offset-value" type="button" title="Reset timing correction for this song">0.0s</button>
             <button id="lock-position" title="Lock widget position" aria-label="Lock widget position" aria-pressed="false">🔓</button>
           </div>
         </div>

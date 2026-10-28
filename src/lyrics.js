@@ -4,10 +4,13 @@ const songTitle = document.getElementById('song-title');
 const songArtist = document.getElementById('song-artist');
 const lyricsList = document.getElementById('lyrics-list');
 const lyricsMessage = document.getElementById('lyrics-message');
+const lyricsMessageText = document.getElementById('lyrics-message-text');
+const retryLyricsButton = document.getElementById('retry-lyrics');
 const lyricsSource = document.getElementById('lyrics-source');
 const toast = document.getElementById('toast');
 const opacitySlider = document.getElementById('opacity');
 const offsetLabel = document.getElementById('offset-value');
+const offsetSlider = document.getElementById('offset-slider');
 const lockButton = document.getElementById('lock-position');
 let mediaTimeline = { positionMs: 0, durationMs: 0, observedAt: 0, playbackStatus: 'paused' };
 let lyricLines = [];
@@ -15,6 +18,9 @@ let lyricElements = [];
 let isSyncedLyrics = false;
 let activeLyricIndex = -2;
 let lyricOffsetMs = 0;
+let mediaTrackKey = '';
+let manualSyncActive = false;
+let mediaPositionUnavailable = false;
 let karaokeRowIndex = -1;
 let karaokeWordElements = [];
 const wordSegmenter = typeof Intl.Segmenter === 'function'
@@ -25,8 +31,33 @@ opacitySlider.addEventListener('input', (event) => {
   window.lyricrizzz.setOpacity(Number(event.target.value) / 100);
 });
 document.getElementById('settings').addEventListener('click', () => window.lyricrizzz.openSettings());
-document.getElementById('offset-minus').addEventListener('click', () => adjustLyricsOffset(-500));
-document.getElementById('offset-plus').addEventListener('click', () => adjustLyricsOffset(500));
+offsetSlider.addEventListener('input', () => {
+  lyricOffsetMs = Number(offsetSlider.value) * 100;
+  updateOffsetLabel();
+  updateActiveLyric();
+});
+offsetSlider.addEventListener('change', () => {
+  void window.lyricrizzz.setOffset(lyricOffsetMs).catch((error) => showToast(`Could not adjust lyric timing: ${error.message}`));
+});
+offsetLabel.addEventListener('click', () => {
+  lyricOffsetMs = 0;
+  offsetSlider.value = '0';
+  updateOffsetLabel();
+  updateActiveLyric();
+  void window.lyricrizzz.setOffset(0).catch((error) => showToast(`Could not reset lyric timing: ${error.message}`));
+});
+retryLyricsButton.addEventListener('click', async () => {
+  retryLyricsButton.disabled = true;
+  retryLyricsButton.textContent = 'Retrying…';
+  try {
+    await window.lyricrizzz.retryLyrics();
+  } catch (error) {
+    showToast(`Could not retry lyrics: ${error.message}`);
+  } finally {
+    retryLyricsButton.disabled = false;
+    retryLyricsButton.textContent = 'Retry';
+  }
+});
 lockButton.addEventListener('click', async () => {
   try {
     updatePositionLock(await window.lyricrizzz.setPositionLock(lockButton.getAttribute('aria-pressed') !== 'true'));
@@ -102,6 +133,7 @@ function applyWidgetSettings(snapshot) {
   window.LyricrizzzTheme.applyAppearance(document.body, snapshot.settings, snapshot.themes, snapshot.backgroundDataUrl);
   opacitySlider.value = String(Math.round(snapshot.settings.widgetOpacity * 100));
   lyricOffsetMs = Number(snapshot.settings.offsetMs) || 0;
+  offsetSlider.value = String(Math.round(lyricOffsetMs / 100));
   updateOffsetLabel();
   updatePositionLock(Boolean(snapshot.settings.lockPosition));
 }
@@ -118,15 +150,34 @@ function updateLyrics(payload) {
     row.className = isSyncedLyrics ? 'lyric-row' : 'lyric-row unsynced';
     row.dataset.index = String(index);
     row.textContent = line.text;
+    if (isSyncedLyrics) {
+      row.title = 'Click when this line is being sung to sync lyrics for this song';
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-label', `Sync lyrics to: ${line.text}`);
+      row.addEventListener('click', () => syncToLyricLine(index));
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          syncToLyricLine(index);
+        }
+      });
+    }
     lyricsList.append(row);
     return row;
   });
 
-  lyricsMessage.textContent = lyricLines.length ? '' : (data.message || 'No lyrics found for this song.');
+  lyricsMessageText.textContent = lyricLines.length ? '' : (data.message || 'No lyrics found for this song.');
   lyricsMessage.hidden = lyricLines.length > 0;
+  retryLyricsButton.hidden = lyricLines.length > 0 || data.source !== 'error';
+  retryLyricsButton.disabled = false;
+  retryLyricsButton.textContent = 'Retry';
   lyricsSource.textContent = lyricLines.length
     ? `${data.source === 'online' ? 'LRCLIB' : 'LOCAL FILE'} · ${data.synced ? 'SYNCED' : 'UNSYNCED'}`
     : (data.format === 'pdf' ? 'PDF CONVERSION NEEDED' : 'LYRICS');
+  if (isSyncedLyrics && mediaPositionUnavailable && !manualSyncActive) {
+    lyricsSource.textContent += ' · CLICK SUNG LINE TO SYNC';
+  }
   lyricsSource.title = data.cacheMessage || '';
   if (data.cacheMessage) {
     lyricsSource.textContent += data.cacheMessage.includes('existing') ? ' · LOCAL COPY KEPT' : ' · COPY NOT SAVED';
@@ -136,6 +187,13 @@ function updateLyrics(payload) {
 
 function updateMediaSession(session) {
   if (!session || (!session.title && !session.artist)) {
+    mediaTrackKey = '';
+    manualSyncActive = false;
+    mediaPositionUnavailable = false;
+    mediaPositionUnavailable = false;
+    lyricOffsetMs = 0;
+    offsetSlider.value = '0';
+    updateOffsetLabel();
     songLabel.textContent = 'WAITING FOR PLAYER';
     songLabel.className = 'song-label';
     songTitle.textContent = '♪ Waiting for song...';
@@ -145,16 +203,34 @@ function updateMediaSession(session) {
   }
 
   const status = session.playbackStatus === 'playing' ? 'PLAYING' : 'PAUSED';
+  const nextTrackKey = `${String(session.artist || '').normalize('NFC').trim().toLocaleLowerCase()}\u001f${String(session.title || '').normalize('NFC').trim().toLocaleLowerCase()}`;
+  if (nextTrackKey !== mediaTrackKey) {
+    mediaTrackKey = nextTrackKey;
+    manualSyncActive = false;
+    lyricOffsetMs = Number(session.lyricOffsetMs) || 0;
+    offsetSlider.value = String(Math.round(lyricOffsetMs / 100));
+    updateOffsetLabel();
+  }
   songLabel.textContent = `${status} · ${session.appName}`;
   songLabel.className = `song-label song-status-${session.playbackStatus}`;
   songTitle.textContent = session.title || session.artist;
   songArtist.textContent = session.title && session.artist ? session.artist : '';
-  mediaTimeline = {
-    positionMs: Number(session.positionMs) || 0,
-    durationMs: Number(session.durationMs) || 0,
-    observedAt: performance.now(),
-    playbackStatus: session.playbackStatus,
-  };
+  const reportedPosition = Number(session.positionMs) || 0;
+  mediaPositionUnavailable = session.playbackStatus === 'playing' && reportedPosition === 0;
+  if (!manualSyncActive || reportedPosition > 0) {
+    if (reportedPosition > 0) manualSyncActive = false;
+    mediaTimeline = {
+      positionMs: reportedPosition,
+      durationMs: Number(session.durationMs) || 0,
+      observedAt: performance.now(),
+      playbackStatus: session.playbackStatus,
+    };
+  } else {
+    const currentPosition = Math.max(0, getCurrentPositionMs() - lyricOffsetMs);
+    mediaTimeline.positionMs = currentPosition;
+    mediaTimeline.observedAt = performance.now();
+    mediaTimeline.playbackStatus = session.playbackStatus;
+  }
   updateActiveLyric();
 }
 
@@ -259,20 +335,29 @@ function updateKaraokeProgress(positionMs, activeIndex) {
   });
 }
 
-async function adjustLyricsOffset(deltaMs) {
-  try {
-    lyricOffsetMs = await window.lyricrizzz.adjustOffset(deltaMs);
-    updateOffsetLabel();
-    updateActiveLyric();
-  } catch (error) {
-    showToast(`Could not adjust lyric timing: ${error.message}`);
+function syncToLyricLine(index) {
+  const line = lyricLines[index];
+  if (!line || !Number.isFinite(line.timeMs)) return;
+  mediaTimeline.positionMs = line.timeMs;
+  mediaTimeline.observedAt = performance.now();
+  manualSyncActive = true;
+  mediaPositionUnavailable = false;
+  lyricOffsetMs = 0;
+  offsetSlider.value = '0';
+  updateOffsetLabel();
+  void window.lyricrizzz.setOffset(0);
+  activeLyricIndex = -2;
+  updateActiveLyric();
+  if (lyricsSource.textContent.includes('CLICK SUNG LINE TO SYNC')) {
+    lyricsSource.textContent = lyricsSource.textContent.replace(' · CLICK SUNG LINE TO SYNC', '');
   }
+  showToast('Synced. Fine-tune with the timing slider if needed.');
 }
 
 function updateOffsetLabel() {
   const seconds = lyricOffsetMs / 1000;
   offsetLabel.textContent = `${seconds > 0 ? '+' : ''}${seconds.toFixed(1)}s`;
-  offsetLabel.title = `Lyrics offset ${seconds.toFixed(1)} seconds`;
+  offsetLabel.title = 'Click to reset timing correction for this song';
 }
 
 function updatePositionLock(locked) {

@@ -10,7 +10,7 @@ Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions 
 
 ## Download the beta
 
-The current beta targets 64-bit Windows 10 build 17763 or later. Download either `Lyricrizzz-0.1.0-beta.5-Setup.exe` to install the app or `Lyricrizzz-0.1.0-beta.5-Portable.exe` to run it without an installer from the repository's [Releases](https://github.com/not-user-mayank/LyricRizzz/releases) page. Windows may show a SmartScreen prompt because this beta is not code-signed.
+The current beta targets 64-bit Windows 10 build 17763 or later. Download either `Lyricrizzz-0.1.0-beta.6-Setup.exe` to install the app or `Lyricrizzz-0.1.0-beta.6-Portable.exe` to run it without an installer from the repository's [Releases](https://github.com/not-user-mayank/LyricRizzz/releases) page. Windows may show a SmartScreen prompt because this beta is not code-signed.
 
 To build both Windows packages locally, run `npm install` and then `npm run dist:win`. The output is written to `release/`. Pushing a `v*` version tag also builds the packages on Windows and publishes them as a GitHub prerelease.
 
@@ -19,7 +19,9 @@ To build both Windows packages locally, run `npm install` and then `npm run dist
 - Drag the lyrics card or the title area to move the widget.
 - Hover over the widget to show its controls.
 - Use the size buttons to resize and the slider to change opacity.
-- Use `−0.5` and `+0.5` to adjust lyric timing in half-second steps; the setting is saved between launches.
+- Drag the lyrics timing slider for 0.1-second adjustments. Timing corrections are saved per song; click the displayed value to reset it.
+- If Firefox does not report its playback position, click the lyric line as it is sung to sync that song, then fine-tune with the slider.
+- If LRCLIB is temporarily unavailable, use the Retry button below the error message.
 - Use the lock icon to prevent the widget from being moved. Click it again to unlock.
 - Click the target icon or press `Ctrl+Shift+L` to toggle click-through. Press the shortcut again to turn click-through off.
 - Use the minimize button in the hover toolbar. Restore the minimized widget with `Ctrl+Shift+M`.

@@ -5,7 +5,7 @@ const LRCLIB_BASE_URL = 'https://lrclib.net/api';
 const USER_AGENT = 'Lyricrizzz/1.0.0 (https://github.com/not-user-mayank/LyricRizzz)';
 const REQUEST_TIMEOUT_MS = 8000;
 const MIN_REQUEST_INTERVAL_MS = 300;
-const MAX_SERVER_RETRIES = 2;
+const MAX_SERVER_RETRIES = 3;
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 let rateLimitedUntil = 0;
@@ -147,7 +147,19 @@ function matchesSearchRecord(record, artist, title) {
   const expectedArtist = normalizeName(artist);
   const resultTitle = normalizeName(record.trackName || record.name);
   const resultArtist = normalizeName(record.artistName);
-  return resultTitle === expectedTitle && (!expectedArtist || resultArtist === expectedArtist || resultArtist.includes(expectedArtist));
+  if (resultTitle !== expectedTitle) return false;
+  if (!expectedArtist) return true;
+
+  // Players often expose every credited performer while LRCLIB stores only
+  // the primary artist (for example "Anirudh Ravichander, Super Subu, ...").
+  const artistParts = expectedArtist.split(/\s*(?:,|;|\/|&|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i);
+  return artistParts.some((part) => part.length >= 5 && (
+    resultArtist === part || resultArtist.startsWith(`${part} `) || part.startsWith(`${resultArtist} `)
+  ));
+}
+
+function primaryArtistName(artist) {
+  return String(artist || '').split(/\s*(?:,|;|\/|&|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)[0].trim();
 }
 
 async function performRequest(url) {
@@ -233,23 +245,37 @@ async function fetchOnlineLyrics(track) {
   const title = String(track.title || '').trim();
   if (!title) return null;
 
+  const lookupArtist = primaryArtistName(artist);
   const params = new URLSearchParams({ track_name: title });
-  if (artist) params.set('artist_name', artist);
+  if (lookupArtist) params.set('artist_name', lookupArtist);
   if (track.album) params.set('album_name', track.album);
   const durationSeconds = Math.round(Number(track.durationMs) / 1000);
   if (Number.isFinite(durationSeconds) && durationSeconds >= 1 && durationSeconds <= 3600) params.set('duration', String(durationSeconds));
 
+  let exactRequestError;
   if (artist && params.has('duration')) {
-    const exact = await requestJson(`${LRCLIB_BASE_URL}/get?${params}`);
-    if (exact) {
-      const result = lyricsRecordToResult(exact, 'online');
-      if (result) return { ...result, record: exact };
-      return null;
+    try {
+      const exact = await requestJson(`${LRCLIB_BASE_URL}/get?${params}`);
+      if (exact) {
+        const result = lyricsRecordToResult(exact, 'online');
+        if (result) return { ...result, record: exact };
+        return null;
+      }
+    } catch (error) {
+      // Exact lookup can fail temporarily while the search endpoint is healthy.
+      // Keep going so one transient 503 does not block a valid search result.
+      if (![500, 502, 503, 504].includes(error.status)) throw error;
+      exactRequestError = error;
     }
   }
 
-  const query = new URLSearchParams({ q: [artist, title].filter(Boolean).join(' ') });
-  const records = await requestJson(`${LRCLIB_BASE_URL}/search?${query}`);
+  const query = new URLSearchParams({ q: [lookupArtist, title].filter(Boolean).join(' ') });
+  let records;
+  try {
+    records = await requestJson(`${LRCLIB_BASE_URL}/search?${query}`);
+  } catch (error) {
+    throw error || exactRequestError;
+  }
   if (!Array.isArray(records)) return null;
   const match = records.find((record) => matchesSearchRecord(record, artist, title));
   const result = lyricsRecordToResult(match, 'online');

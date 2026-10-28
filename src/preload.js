@@ -5,7 +5,8 @@ contextBridge.exposeInMainWorld('lyricrizzz', {
   resize: (direction) => ipcRenderer.invoke('widget:resize', direction),
   minimize: () => ipcRenderer.invoke('widget:minimize'),
   close: () => ipcRenderer.invoke('widget:close'),
-  adjustOffset: (delta) => ipcRenderer.invoke('widget:adjust-offset', delta),
+  setOffset: (value) => ipcRenderer.invoke('widget:set-offset', value),
+  retryLyrics: () => ipcRenderer.invoke('lyrics:retry'),
   setPositionLock: (enabled) => ipcRenderer.invoke('widget:set-position-lock', enabled),
   setClickThrough: (enabled) => ipcRenderer.invoke('widget:set-click-through', enabled),
   onMediaSessionChanged: (callback) => {

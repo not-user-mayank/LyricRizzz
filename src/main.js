@@ -41,6 +41,8 @@ let settingsStore;
 let currentSettings = { ...DEFAULT_SETTINGS };
 let backgroundDirectory;
 let preferencesWriteTimer;
+let trackOffsets = {};
+let currentTrackOffsetMs = 0;
 
 function normalizeSettings(input = {}) {
   if (!input || typeof input !== 'object') input = {};
@@ -112,7 +114,7 @@ async function backgroundAsDataUrl(filePath) {
 
 async function settingsSnapshot() {
   return {
-    settings: currentSettings,
+    settings: { ...currentSettings, offsetMs: currentTrackOffsetMs },
     themes,
     backgroundDataUrl: await backgroundAsDataUrl(currentSettings.backgroundImagePath),
   };
@@ -218,11 +220,23 @@ ipcMain.handle('widget:set-opacity', (_event, value) => {
 
 ipcMain.handle('widget:minimize', () => lyricsWindow?.minimize());
 ipcMain.handle('widget:close', () => lyricsWindow?.close());
-ipcMain.handle('widget:adjust-offset', (_event, delta) => {
-  if (delta !== -500 && delta !== 500) return currentSettings.offsetMs;
-  currentSettings.offsetMs = Math.min(10_000, Math.max(-10_000, currentSettings.offsetMs + delta));
-  settingsStore?.set('settings', currentSettings);
-  return currentSettings.offsetMs;
+ipcMain.handle('widget:set-offset', (_event, value) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return currentTrackOffsetMs;
+  currentTrackOffsetMs = Math.round(Math.min(30_000, Math.max(-30_000, value)) / 100) * 100;
+  currentSettings.offsetMs = currentTrackOffsetMs;
+  if (currentTrackKey) {
+    trackOffsets[currentTrackKey] = currentTrackOffsetMs;
+    settingsStore?.set('trackOffsets', trackOffsets);
+  }
+  schedulePreferencesSave();
+  return currentTrackOffsetMs;
+});
+ipcMain.handle('lyrics:retry', () => {
+  if (latestMediaSession && (latestMediaSession.title || latestMediaSession.artist)) {
+    loadLyricsForSession(latestMediaSession);
+    return true;
+  }
+  return false;
 });
 ipcMain.handle('widget:set-position-lock', (_event, enabled) => {
   if (typeof enabled !== 'boolean' || !lyricsWindow) return currentSettings.lockPosition;
@@ -234,14 +248,17 @@ ipcMain.handle('widget:set-position-lock', (_event, enabled) => {
 
 function sendMediaSession(session) {
   if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
-  latestMediaSession = session;
-  if (rendererReady) lyricsWindow.webContents.send('media-session:changed', session);
-
   const trackKey = session
-    ? `${String(session.artist || '').trim().toLocaleLowerCase()}\u001f${String(session.title || '').trim().toLocaleLowerCase()}`
+    ? `${String(session.artist || '').normalize('NFC').trim().toLocaleLowerCase()}\u001f${String(session.title || '').normalize('NFC').trim().toLocaleLowerCase()}`
     : '';
-  if (trackKey === currentTrackKey) return;
-  currentTrackKey = trackKey;
+  const trackChanged = trackKey !== currentTrackKey;
+  if (trackChanged) {
+    currentTrackKey = trackKey;
+    currentTrackOffsetMs = trackOffsets[trackKey] || 0;
+  }
+  latestMediaSession = session ? { ...session, lyricOffsetMs: currentTrackOffsetMs } : null;
+  if (rendererReady) lyricsWindow.webContents.send('media-session:changed', latestMediaSession);
+  if (!trackChanged) return;
 
   if (!session || (!session.title && !session.artist)) {
     lyricsRequestId += 1;
@@ -383,7 +400,7 @@ ipcMain.handle('settings:save', async (_event, input) => {
   clearTimeout(preferencesWriteTimer);
   preferencesWriteTimer = undefined;
   updated.widgetBounds = currentSettings.widgetBounds;
-  updated.offsetMs = currentSettings.offsetMs;
+  updated.offsetMs = currentTrackOffsetMs;
   updated.lockPosition = currentSettings.lockPosition;
   currentSettings = updated;
   settingsStore.set('settings', currentSettings);
@@ -421,6 +438,9 @@ ipcMain.handle('settings:reset', async () => {
   clearTimeout(preferencesWriteTimer);
   preferencesWriteTimer = undefined;
   currentSettings = { ...DEFAULT_SETTINGS };
+  trackOffsets = {};
+  currentTrackOffsetMs = 0;
+  settingsStore.set('trackOffsets', trackOffsets);
   settingsStore.set('settings', currentSettings);
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.setOpacity(currentSettings.widgetOpacity);
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.setMovable(true);
@@ -448,6 +468,13 @@ app.whenReady().then(async () => {
   const { default: ElectronStore } = await import('electron-store');
   settingsStore = new ElectronStore({ name: 'preferences', defaults: { settings: DEFAULT_SETTINGS } });
   currentSettings = normalizeSettings(settingsStore.get('settings', DEFAULT_SETTINGS));
+  const savedTrackOffsets = settingsStore.get('trackOffsets', {});
+  trackOffsets = savedTrackOffsets && typeof savedTrackOffsets === 'object' && !Array.isArray(savedTrackOffsets)
+    ? Object.fromEntries(Object.entries(savedTrackOffsets)
+      .filter(([key, value]) => key.length <= 500 && Number.isFinite(value))
+      .map(([key, value]) => [key, Math.round(Math.min(30_000, Math.max(-30_000, value)) / 100) * 100]))
+    : {};
+  currentTrackOffsetMs = 0;
   backgroundDirectory = path.join(app.getPath('userData'), 'backgrounds');
   if (currentSettings.backgroundImagePath && !isBackgroundPath(currentSettings.backgroundImagePath)) {
     currentSettings.backgroundImagePath = '';
