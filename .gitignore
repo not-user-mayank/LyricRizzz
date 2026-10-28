@@ -150,6 +150,7 @@ vite.config.ts.timestamp-*
 
 # Electron build output
 /release/
+/outputs/*.exe
 
 # User lyric files are kept local
 /LocalLyrics/*
