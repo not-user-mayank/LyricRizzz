@@ -1,4 +1,6 @@
 const { onSessionsChanged, shutdown } = require('windows-media-sessions');
+const fs = require('node:fs');
+const path = require('node:path');
 
 let unsubscribe;
 let selectedSessionId;
@@ -24,6 +26,24 @@ function startMediaSessionService(onUpdate, onError = () => {}) {
   }
 
   try {
+    // Electron's ASAR virtual paths cannot be passed to child_process.spawn.
+    // The backend is explicitly unpacked at build time, so point the package
+    // at its real filesystem path in packaged builds.
+    if (!process.env.WINDOWS_MEDIA_SESSIONS_BACKEND && process.resourcesPath) {
+      const unpackedBackend = path.join(
+        process.resourcesPath,
+        'app.asar.unpacked',
+        'node_modules',
+        'windows-media-sessions',
+        'bin',
+        'win-x64',
+        'windows-media-sessions-backend.exe',
+      );
+      if (fs.existsSync(unpackedBackend)) {
+        process.env.WINDOWS_MEDIA_SESSIONS_BACKEND = unpackedBackend;
+      }
+    }
+
     unsubscribe = onSessionsChanged((sessions) => {
       const session = selectSession(sessions);
       if (!session) {
