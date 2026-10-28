@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>Lyricrizzz</title>
+    <link rel="stylesheet" href="lyrics.css" />
+  </head>
+  <body>
+    <main class="widget" aria-label="Floating lyrics">
+      <header class="toolbar" aria-label="Widget controls">
+        <span class="drag-handle" title="Drag to move">LYRICRIZZZ</span>
+        <button id="click-through" title="Toggle click-through (Ctrl+Shift+L)" aria-pressed="false">◎</button>
+        <button id="smaller" title="Make widget smaller">−</button>
+        <button id="larger" title="Make widget larger">＋</button>
+        <label class="opacity-control" title="Window opacity">
+          <span>◐</span><input id="opacity" type="range" min="25" max="100" value="94" aria-label="Window opacity" />
+        </label>
+        <button id="minimize" title="Minimize">—</button>
+        <button id="close" title="Close">×</button>
+      </header>
+      <section class="lyrics-card">
+        <div class="song-label">NOW PLAYING</div>
+        <div class="lyrics-line">♪ Waiting for song...</div>
+        <div class="hint">Drag anywhere • Ctrl+Shift+L toggles click-through</div>
+      </section>
+    </main>
+    <script src="lyrics.js"></script>
+  </body>
+</html>

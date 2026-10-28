@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Electron build output
+/release/
+
+# User lyric files are kept local
+/LocalLyrics/*
+!/LocalLyrics/.gitkeep

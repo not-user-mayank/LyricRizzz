@@ -1,0 +1,17 @@
+{
+  "name": "lyricrizzz",
+  "version": "1.0.0",
+  "description": "Floating lyrics widget for Windows",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  }
+}
