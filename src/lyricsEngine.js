@@ -5,6 +5,7 @@ const LRCLIB_BASE_URL = 'https://lrclib.net/api';
 const USER_AGENT = 'Lyricrizzz/1.0.0 (https://github.com/not-user-mayank/LyricRizzz)';
 const REQUEST_TIMEOUT_MS = 8000;
 const MIN_REQUEST_INTERVAL_MS = 300;
+const MAX_SERVER_RETRIES = 2;
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 let rateLimitedUntil = 0;
@@ -182,15 +183,47 @@ async function performRequest(url) {
       throw error;
     }
     if (response.status === 404) return null;
-    if (!response.ok) throw new Error(`LRCLIB request failed (${response.status}).`);
+    if (!response.ok) {
+      const error = new Error(`LRCLIB request failed (${response.status}).`);
+      error.status = response.status;
+      error.retryAfter = response.headers.get('retry-after');
+      throw error;
+    }
     return await response.json();
   } finally {
     clearTimeout(timeout);
   }
 }
 
+function retryDelayMs(error, retryIndex) {
+  if (![500, 502, 503, 504].includes(error.status)) return null;
+  const retryAfter = error.retryAfter;
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const requestedDelay = Number.isFinite(seconds)
+      ? seconds * 1000
+      : Date.parse(retryAfter) - Date.now();
+    if (Number.isFinite(requestedDelay) && requestedDelay > 0) {
+      return requestedDelay <= 30_000 ? requestedDelay : null;
+    }
+  }
+  return 400 * (2 ** retryIndex);
+}
+
+async function performRequestWithRetry(url) {
+  for (let retryIndex = 0; ; retryIndex += 1) {
+    try {
+      return await performRequest(url);
+    } catch (error) {
+      const delay = retryIndex < MAX_SERVER_RETRIES ? retryDelayMs(error, retryIndex) : null;
+      if (delay === null) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 function requestJson(url) {
-  const request = requestQueue.then(() => performRequest(url));
+  const request = requestQueue.then(() => performRequestWithRetry(url));
   requestQueue = request.catch(() => {});
   return request;
 }

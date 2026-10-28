@@ -10,7 +10,7 @@ Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions 
 
 ## Download the beta
 
-The current beta targets 64-bit Windows 10 build 17763 or later. Download either `Lyricrizzz-0.1.0-beta.4-Setup.exe` to install the app or `Lyricrizzz-0.1.0-beta.4-Portable.exe` to run it without an installer from the repository's [Releases](https://github.com/not-user-mayank/LyricRizzz/releases) page. Windows may show a SmartScreen prompt because this beta is not code-signed.
+The current beta targets 64-bit Windows 10 build 17763 or later. Download either `Lyricrizzz-0.1.0-beta.5-Setup.exe` to install the app or `Lyricrizzz-0.1.0-beta.5-Portable.exe` to run it without an installer from the repository's [Releases](https://github.com/not-user-mayank/LyricRizzz/releases) page. Windows may show a SmartScreen prompt because this beta is not code-signed.
 
 To build both Windows packages locally, run `npm install` and then `npm run dist:win`. The output is written to `release/`. Pushing a `v*` version tag also builds the packages on Windows and publishes them as a GitHub prerelease.
 
