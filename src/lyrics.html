@@ -17,12 +17,13 @@
         <label class="opacity-control" title="Window opacity">
           <span>◐</span><input id="opacity" type="range" min="25" max="100" value="94" aria-label="Window opacity" />
         </label>
-        <button id="minimize" title="Minimize">—</button>
+        <button id="minimize" title="Minimize (Ctrl+Shift+M to restore)">—</button>
         <button id="close" title="Close">×</button>
       </header>
       <section class="lyrics-card">
-        <div class="song-label">NOW PLAYING</div>
-        <div class="lyrics-line">♪ Waiting for song...</div>
+        <div class="song-label" id="song-label">WAITING FOR PLAYER</div>
+        <div class="lyrics-line" id="song-title">♪ Waiting for song...</div>
+        <div class="song-artist" id="song-artist"></div>
         <div class="hint">Drag anywhere • Ctrl+Shift+L toggles click-through</div>
       </section>
     </main>

@@ -1,6 +1,6 @@
 # Lyricrizzz
 
-Lyricrizzz is a Windows floating lyrics widget. The current project milestone is the transparent, always-on-top widget shell; song detection and lyric loading are planned for later phases.
+Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions and displays a playing track (or a paused track if nothing is playing), its artist, player, and play/pause state. Synced lyrics and local lyric loading are planned for later phases.
 
 ## Run locally
 
@@ -14,7 +14,14 @@ Lyricrizzz is a Windows floating lyrics widget. The current project milestone is
 - Hover over the widget to show its controls.
 - Use the size buttons to resize and the slider to change opacity.
 - Click the target icon or press `Ctrl+Shift+L` to toggle click-through. Press the shortcut again to turn click-through off.
-- Use the minimize and close buttons in the hover toolbar.
+- Use the minimize button in the hover toolbar. Restore the minimized widget with `Ctrl+Shift+M`.
+- Use the close button to exit the app.
+
+## Song detection
+
+The app reads Windows Global System Media Transport Controls (GSMTC) sessions. A player must publish a Windows media session for its track details to appear; coverage can vary by player and browser. Lyricrizzz does not identify songs by listening to audio.
+
+Windows 10 build 17763 or later, 64-bit, is required for media-session detection.
 
 ## Project folders
 
@@ -22,3 +29,5 @@ Lyricrizzz is a Windows floating lyrics widget. The current project milestone is
 - `LocalLyrics/` — Reserved for local lyric files in a later phase.
 - `themes/` — Reserved for themes.
 - `assets/` — Reserved for app assets.
+
+Windows session detection uses [`windows-media-sessions`](https://github.com/Gyom03/windows-media-sessions), which includes its own Windows backend.

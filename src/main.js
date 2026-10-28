@@ -1,8 +1,12 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('node:path');
+const { startMediaSessionService, stopMediaSessionService } = require('./mediaSessionService');
 
 let lyricsWindow;
 let clickThrough = false;
+let stopListeningForMedia;
+let mediaShutdownStarted = false;
+let mediaShutdownComplete = false;
 
 function createLyricsWindow() {
   lyricsWindow = new BrowserWindow({
@@ -43,6 +47,11 @@ ipcMain.handle('widget:set-opacity', (_event, value) => {
 ipcMain.handle('widget:minimize', () => lyricsWindow?.minimize());
 ipcMain.handle('widget:close', () => lyricsWindow?.close());
 
+function sendMediaSession(session) {
+  if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
+  lyricsWindow.webContents.send('media-session:changed', session);
+}
+
 ipcMain.handle('widget:resize', (_event, direction) => {
   if (!lyricsWindow) return;
   const bounds = lyricsWindow.getBounds();
@@ -61,13 +70,36 @@ ipcMain.handle('widget:set-click-through', (_event, enabled) => {
 
 app.whenReady().then(() => {
   createLyricsWindow();
+  stopListeningForMedia = startMediaSessionService(sendMediaSession, (error) => {
+    console.error('Windows media detection could not start:', error.message);
+    sendMediaSession(null);
+  });
   globalShortcut.register('Control+Shift+L', () => {
     if (!lyricsWindow) return;
     clickThrough = !clickThrough;
     lyricsWindow.setIgnoreMouseEvents(clickThrough, { forward: true });
     lyricsWindow.webContents.send('widget:click-through-changed', clickThrough);
   });
+  globalShortcut.register('Control+Shift+M', () => {
+    if (!lyricsWindow) return;
+    if (lyricsWindow.isMinimized()) lyricsWindow.restore();
+    lyricsWindow.show();
+    lyricsWindow.focus();
+  });
 });
 
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('before-quit', (event) => {
+  if (mediaShutdownComplete) return;
+  event.preventDefault();
+  if (mediaShutdownStarted) return;
+  mediaShutdownStarted = true;
+  stopListeningForMedia?.();
+  globalShortcut.unregisterAll();
+  stopMediaSessionService()
+    .catch((error) => console.error('Could not stop Windows media detection cleanly:', error.message))
+    .finally(() => {
+      mediaShutdownComplete = true;
+      app.quit();
+    });
+});
 app.on('window-all-closed', () => app.quit());
