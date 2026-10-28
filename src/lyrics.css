@@ -112,3 +112,20 @@ body.dragging-files .drop-overlay { display: flex; }
   .drag-handle { display: none; }
   .opacity-control input { width: 38px; }
 }
+
+@media (max-height: 220px) {
+  .widget { padding: 5px; gap: 2px; }
+  .toolbar { height: 27px; flex: 0 0 27px; gap: 3px; }
+  .toolbar button, .opacity-control { height: 22px; }
+  .toolbar button { width: 22px; }
+  .lyrics-card { padding: 6px 12px 5px; }
+  .song-label, .song-artist { display: none; }
+  .track-title { margin-top: 0; font-size: clamp(12px, 4vw, 16px); }
+  .lyrics-scroll { margin: 2px -4px 1px; padding: 0 4px; justify-content: flex-start; }
+  .lyrics-list { gap: 2px; }
+  .lyric-row, .lyrics-message { font-size: clamp(12px, 3.8vw, 16px); line-height: 1.15; }
+  .lyric-row.current { font-size: clamp(15px, 4.8vw, 19px); }
+  .widget-footer { gap: 3px; }
+  .offset-controls button { height: 19px; min-width: 27px; font-size: 8px; }
+  .offset-controls #offset-value { min-width: 30px; font-size: 8px; }
+}
