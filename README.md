@@ -1,6 +1,6 @@
 # Lyricrizzz
 
-Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions and displays a playing track (or a paused track if nothing is playing), its artist, player, and play/pause state. Synced lyrics and local lyric loading are planned for later phases.
+Lyricrizzz is a Windows floating lyrics widget. It reads Windows media sessions and displays a playing track (or a paused track if nothing is playing), its artist, player, and play/pause state. It loads local lyrics first, then checks LRCLIB and caches a match. Theme controls and in-app lyric import are planned for later phases.
 
 ## Run locally
 
@@ -23,10 +23,14 @@ The app reads Windows Global System Media Transport Controls (GSMTC) sessions. A
 
 Windows 10 build 17763 or later, 64-bit, is required for media-session detection.
 
+## Lyrics
+
+Lyricrizzz checks `Documents/FloatingLyrics/LocalLyrics/` first for a file named `Artist - Title.lrc`, `.srt`, or `.txt`. If no local match exists, it queries LRCLIB and saves a found lyric file there for next time. LRC and SRT files sync to Windows playback position; TXT files are shown as scrollable unsynced lyrics. A matching PDF displays a conversion message.
+
 ## Project folders
 
 - `src/` — Electron main process, preload bridge, and widget UI.
-- `LocalLyrics/` — Reserved for local lyric files in a later phase.
+- `LocalLyrics/` — Repository placeholder; runtime lyric files are stored in `Documents/FloatingLyrics/LocalLyrics/`.
 - `themes/` — Reserved for themes.
 - `assets/` — Reserved for app assets.
 

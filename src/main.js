@@ -1,12 +1,19 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('node:path');
 const { startMediaSessionService, stopMediaSessionService } = require('./mediaSessionService');
+const { getLyrics } = require('./lyricsEngine');
 
 let lyricsWindow;
 let clickThrough = false;
 let stopListeningForMedia;
 let mediaShutdownStarted = false;
 let mediaShutdownComplete = false;
+let currentTrackKey = '';
+let lyricsRequestId = 0;
+let lyricsDirectory;
+let rendererReady = false;
+let latestMediaSession = null;
+let latestLyrics = { lines: [], message: '♪ Waiting for song...' };
 
 function createLyricsWindow() {
   lyricsWindow = new BrowserWindow({
@@ -34,6 +41,13 @@ function createLyricsWindow() {
   });
 
   lyricsWindow.setAlwaysOnTop(true, 'screen-saver');
+  lyricsWindow.webContents.on('did-start-loading', () => { rendererReady = false; });
+  lyricsWindow.webContents.on('did-finish-load', () => {
+    rendererReady = true;
+    lyricsWindow.webContents.send('media-session:changed', latestMediaSession);
+    lyricsWindow.webContents.send('lyrics:changed', latestLyrics);
+    lyricsWindow.webContents.send('widget:click-through-changed', clickThrough);
+  });
   lyricsWindow.loadFile(path.join(__dirname, 'lyrics.html'));
   lyricsWindow.once('ready-to-show', () => lyricsWindow.show());
   lyricsWindow.on('closed', () => { lyricsWindow = null; });
@@ -49,7 +63,30 @@ ipcMain.handle('widget:close', () => lyricsWindow?.close());
 
 function sendMediaSession(session) {
   if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
-  lyricsWindow.webContents.send('media-session:changed', session);
+  latestMediaSession = session;
+  if (rendererReady) lyricsWindow.webContents.send('media-session:changed', session);
+
+  const trackKey = session
+    ? `${String(session.artist || '').trim().toLocaleLowerCase()}\u001f${String(session.title || '').trim().toLocaleLowerCase()}`
+    : '';
+  if (trackKey === currentTrackKey) return;
+  currentTrackKey = trackKey;
+  const requestId = ++lyricsRequestId;
+
+  if (!session || (!session.title && !session.artist)) {
+    latestLyrics = { lines: [], message: '♪ Waiting for song...' };
+    if (rendererReady) lyricsWindow.webContents.send('lyrics:changed', latestLyrics);
+    return;
+  }
+
+  latestLyrics = { lines: [], message: 'Looking for lyrics...' };
+  if (rendererReady) lyricsWindow.webContents.send('lyrics:changed', latestLyrics);
+  getLyrics(session, lyricsDirectory).then((lyrics) => {
+    if (requestId === lyricsRequestId && lyricsWindow && !lyricsWindow.isDestroyed()) {
+      latestLyrics = lyrics;
+      if (rendererReady) lyricsWindow.webContents.send('lyrics:changed', lyrics);
+    }
+  });
 }
 
 ipcMain.handle('widget:resize', (_event, direction) => {
@@ -69,6 +106,7 @@ ipcMain.handle('widget:set-click-through', (_event, enabled) => {
 });
 
 app.whenReady().then(() => {
+  lyricsDirectory = path.join(app.getPath('documents'), 'FloatingLyrics', 'LocalLyrics');
   createLyricsWindow();
   stopListeningForMedia = startMediaSessionService(sendMediaSession, (error) => {
     console.error('Windows media detection could not start:', error.message);
@@ -78,7 +116,7 @@ app.whenReady().then(() => {
     if (!lyricsWindow) return;
     clickThrough = !clickThrough;
     lyricsWindow.setIgnoreMouseEvents(clickThrough, { forward: true });
-    lyricsWindow.webContents.send('widget:click-through-changed', clickThrough);
+    if (rendererReady) lyricsWindow.webContents.send('widget:click-through-changed', clickThrough);
   });
   globalShortcut.register('Control+Shift+M', () => {
     if (!lyricsWindow) return;

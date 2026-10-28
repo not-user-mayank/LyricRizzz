@@ -21,10 +21,14 @@
         <button id="close" title="Close">×</button>
       </header>
       <section class="lyrics-card">
-        <div class="song-label" id="song-label">WAITING FOR PLAYER</div>
-        <div class="lyrics-line" id="song-title">♪ Waiting for song...</div>
+        <div class="song-label song-status-paused" id="song-label">WAITING FOR PLAYER</div>
+        <div class="track-title" id="song-title">—</div>
         <div class="song-artist" id="song-artist"></div>
-        <div class="hint">Drag anywhere • Ctrl+Shift+L toggles click-through</div>
+        <div class="lyrics-scroll" id="lyrics-scroll">
+          <div class="lyrics-message" id="lyrics-message">♪ Waiting for song...</div>
+          <div class="lyrics-list" id="lyrics-list"></div>
+        </div>
+        <div class="hint" id="lyrics-source">Drag anywhere • Ctrl+Shift+L toggles click-through</div>
       </section>
     </main>
     <script src="lyrics.js"></script>

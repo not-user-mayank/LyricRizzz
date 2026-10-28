@@ -53,9 +53,9 @@ html, body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 22px;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 13px 20px 10px;
   border: 1px solid #ffffff20;
   border-radius: 18px;
   background: linear-gradient(135deg, #191a25e8, #282633dd);
@@ -63,10 +63,19 @@ html, body {
   -webkit-app-region: drag;
 }
 .song-label, .hint { color: #b8b5c7; font-size: 10px; letter-spacing: 1.8px; }
-.lyrics-line { margin: 10px 0 12px; font-size: clamp(18px, 5vw, 30px); font-weight: 650; line-height: 1.2; text-align: center; text-shadow: 0 2px 12px #0009; }
-.song-artist { margin-top: -6px; color: #d4d0e2; font-size: clamp(12px, 3vw, 16px); text-align: center; }
+.song-label { flex: 0 0 auto; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .song-status-paused { color: #f7d58b; }
 .song-status-playing { color: #9be8b0; }
-.hint { font-size: 10px; letter-spacing: .2px; opacity: .7; }
+.track-title { flex: 0 0 auto; margin-top: 4px; overflow: hidden; font-size: clamp(14px, 4vw, 21px); font-weight: 650; line-height: 1.15; text-align: center; text-overflow: ellipsis; text-shadow: 0 2px 12px #0009; white-space: nowrap; }
+.song-artist { flex: 0 0 auto; overflow: hidden; margin-top: 2px; color: #d4d0e2; font-size: clamp(11px, 3vw, 14px); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.lyrics-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; overflow: auto; margin: 5px -6px 2px; padding: 3px 6px; scrollbar-width: thin; scrollbar-color: #ffffff30 transparent; -webkit-app-region: no-drag; }
+.lyrics-list { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lyric-row, .lyrics-message { width: 100%; color: #ffffff8c; font-size: clamp(13px, 3.6vw, 18px); line-height: 1.25; text-align: center; transition: color 180ms ease, opacity 180ms ease, transform 180ms ease; }
+.lyric-row.current { color: #fff; font-size: clamp(16px, 4.5vw, 23px); font-weight: 700; text-shadow: 0 0 14px #a89dff70; }
+.lyric-row.next { color: #ffffffc7; }
+.lyric-row.previous { color: #ffffff7a; }
+.lyric-row.unsynced { color: #f4f2f8; }
+.lyrics-message { color: #d4d0e2; }
+.hint { flex: 0 0 auto; overflow: hidden; font-size: 9px; letter-spacing: .2px; opacity: .7; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
 body.click-through .toolbar { opacity: 0 !important; }

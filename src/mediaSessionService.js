@@ -37,6 +37,7 @@ function startMediaSessionService(onUpdate, onError = () => {}) {
         id: session.id,
         title: session.title || '',
         artist: session.artist || '',
+        album: session.albumTitle || '',
         appName: session.sourceAppDisplayName || session.sourceAppUserModelId || 'Media player',
         playbackStatus: session.playbackStatus,
         positionMs: session.timeline?.positionMs ?? 0,

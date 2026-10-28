@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('lyricrizzz', {
   onMediaSessionChanged: (callback) => {
     ipcRenderer.on('media-session:changed', (_event, session) => callback(session));
   },
+  onLyricsChanged: (callback) => {
+    ipcRenderer.on('lyrics:changed', (_event, lyrics) => callback(lyrics));
+  },
   onClickThroughChanged: (callback) => {
     ipcRenderer.on('widget:click-through-changed', (_event, enabled) => callback(enabled));
   },
